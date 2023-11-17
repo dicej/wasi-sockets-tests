@@ -1,0 +1,18 @@
+[package]
+name = "sockets-server"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "net", "rt"] }
+tracing = { workspace = true, features = ["log"] }
+futures = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["fs", "process", "macros", "rt-multi-thread"] }
+wit-component = { workspace = true }
+wasmtime = { workspace = true, features = ["component-model"] }
+wasmtime-wasi = { workspace = true }
+reqwest = { workspace = true }
