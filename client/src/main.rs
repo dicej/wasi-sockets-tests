@@ -18,7 +18,6 @@ use {
 fn main() -> Result<()> {
     let network = instance_network::instance_network();
     let client = tcp_create_socket::create_tcp_socket(IpAddressFamily::Ipv4)?;
-    let pollable = client.subscribe();
     let address = SocketAddrV4::from_str(
         &env::args()
             .nth(1)
@@ -34,7 +33,7 @@ fn main() -> Result<()> {
     )?;
     let (rx, tx) = loop {
         match client.finish_connect() {
-            Err(ErrorCode::WouldBlock) => poll::poll_one(&pollable),
+            Err(ErrorCode::WouldBlock) => poll::poll_one(&client.subscribe()),
             result => break result,
         }
     }?;
@@ -44,7 +43,7 @@ fn main() -> Result<()> {
 
     let mut buffer = Vec::with_capacity(message.len());
     while buffer.len() < message.len() {
-        buffer.extend(rx.read((message.len() - buffer.len()).try_into().unwrap())?);
+        buffer.extend(rx.blocking_read((message.len() - buffer.len()).try_into().unwrap())?);
     }
 
     assert_eq!(message.as_slice(), &buffer);

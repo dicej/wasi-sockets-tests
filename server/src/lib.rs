@@ -55,7 +55,7 @@ mod tests {
         super::*,
         anyhow::anyhow,
         futures::{channel::oneshot, future},
-        std::net::Ipv4Addr,
+        std::{env, net::Ipv4Addr, sync::Once},
         tokio::{fs, process::Command},
         wasmtime::{
             component::{Component, Linker},
@@ -85,22 +85,36 @@ mod tests {
         }
     }
 
-    async fn build_component() -> Result<Vec<u8>> {
-        let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
-                           /download/v14.0.4/wasi_snapshot_preview1.command.wasm";
-        let adapter_path = "../target/wasi_snapshot_preview1.command.wasm";
+    async fn build_component(src_path: &str, name: &str) -> Result<Vec<u8>> {
+        let adapter_path = if let Some(path) = env::var("WASI_SOCKETS_TESTS_ADAPTER").ok() {
+            path
+        } else {
+            let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
+                               /download/v14.0.4/wasi_snapshot_preview1.command.wasm";
 
-        if !fs::try_exists(adapter_path).await? {
-            fs::write(
-                adapter_path,
-                reqwest::get(adapter_url).await?.bytes().await?,
-            )
-            .await?;
-        }
+            let adapter_path = "../target/wasi_snapshot_preview1.command.wasm";
+
+            if !fs::try_exists(adapter_path).await? {
+                fs::write(
+                    adapter_path,
+                    reqwest::get(adapter_url).await?.bytes().await?,
+                )
+                .await?;
+            }
+            adapter_path.to_owned()
+        };
+
+        let toolchain =
+            env::var("WASI_SOCKETS_TESTS_TOOLCHAIN").unwrap_or_else(|_| "stable".to_owned());
 
         if Command::new("cargo")
-            .current_dir("../client")
-            .args(["build", "--target", "wasm32-wasi"])
+            .current_dir(src_path)
+            .args([
+                format!("+{toolchain}").as_str(),
+                "build",
+                "--target",
+                "wasm32-wasi",
+            ])
             .status()
             .await?
             .success()
@@ -108,15 +122,17 @@ mod tests {
             Ok(ComponentEncoder::default()
                 .validate(true)
                 .adapter("wasi_snapshot_preview1", &fs::read(adapter_path).await?)?
-                .module(&fs::read("../target/wasm32-wasi/debug/sockets-client.wasm").await?)?
+                .module(&fs::read(format!("../target/wasm32-wasi/debug/{name}.wasm")).await?)?
                 .encode()?)
         } else {
             Err(anyhow!("cargo build failed"))
         }
     }
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test() -> Result<()> {
+    async fn test(src_path: &str, name: &str) -> Result<()> {
+        static ONCE: Once = Once::new();
+        ONCE.call_once(pretty_env_logger::init);
+
         let (server, address) = serve((Ipv4Addr::new(127, 0, 0, 1), 0).into()).await?;
 
         let (_tx, rx) = oneshot::channel::<()>();
@@ -131,7 +147,7 @@ mod tests {
 
         let engine = Engine::new(&config)?;
 
-        let component = Component::new(&engine, build_component().await?)?;
+        let component = Component::new(&engine, build_component(src_path, name).await?)?;
 
         let mut linker = Linker::new(&engine);
 
@@ -155,5 +171,15 @@ mod tests {
             .call_run(&mut store)
             .await?
             .map_err(|()| anyhow::anyhow!("command returned with failing exit status"))
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn direct() -> Result<()> {
+        test("../client", "sockets-client").await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn std() -> Result<()> {
+        test("../client-std", "sockets-client-std").await
     }
 }

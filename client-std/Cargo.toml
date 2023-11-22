@@ -1,0 +1,8 @@
+[package]
+name = "sockets-client-std"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
