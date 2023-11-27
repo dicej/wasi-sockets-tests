@@ -189,11 +189,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn direct_ipv6() -> Result<()> {
-        use std::str::FromStr;
         test(
             "../client",
             "sockets-client",
-            (Ipv6Addr::from_str("fdca:afee:fc4:0:4e2:cc3e:564b:e47a")?, 0).into(),
+            (Ipv6Addr::LOCALHOST, 0).into(),
         )
         .await
     }
@@ -210,11 +209,10 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn std_ipv6() -> Result<()> {
-        use std::str::FromStr;
         test(
             "../client-std",
             "sockets-client-std",
-            (Ipv6Addr::from_str("fdca:afee:fc4:0:4e2:cc3e:564b:e47a")?, 0).into(),
+            (Ipv6Addr::LOCALHOST, 0).into(),
         )
         .await
     }
