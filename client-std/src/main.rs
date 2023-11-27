@@ -5,17 +5,21 @@ use {
     std::{
         env,
         io::{Read, Write},
-        net::{SocketAddrV4, TcpStream},
+        net::{SocketAddr, SocketAddrV4, SocketAddrV6, TcpStream},
         str::FromStr,
     },
 };
 
 fn main() -> Result<()> {
-    let address = SocketAddrV4::from_str(
-        &env::args()
-            .nth(1)
-            .ok_or_else(|| anyhow!("expected ipv4 address CLI argument"))?,
-    )?;
+    let address = env::args()
+        .nth(1)
+        .ok_or_else(|| anyhow!("expected ipv4 address CLI argument"))?;
+
+    let address = if let Ok(address) = SocketAddrV6::from_str(&address) {
+        SocketAddr::V6(address)
+    } else {
+        SocketAddr::V4(SocketAddrV4::from_str(&address)?)
+    };
 
     let mut stream = TcpStream::connect(address)?;
 

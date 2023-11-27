@@ -55,7 +55,11 @@ mod tests {
         super::*,
         anyhow::anyhow,
         futures::{channel::oneshot, future},
-        std::{env, net::Ipv4Addr, sync::Once},
+        std::{
+            env,
+            net::{Ipv4Addr, Ipv6Addr},
+            sync::Once,
+        },
         tokio::{fs, process::Command},
         wasmtime::{
             component::{Component, Linker},
@@ -129,11 +133,11 @@ mod tests {
         }
     }
 
-    async fn test(src_path: &str, name: &str) -> Result<()> {
+    async fn test(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
         static ONCE: Once = Once::new();
         ONCE.call_once(pretty_env_logger::init);
 
-        let (server, address) = serve((Ipv4Addr::new(127, 0, 0, 1), 0).into()).await?;
+        let (server, address) = serve(address).await?;
 
         let (_tx, rx) = oneshot::channel::<()>();
 
@@ -174,12 +178,44 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn direct() -> Result<()> {
-        test("../client", "sockets-client").await
+    async fn direct_ipv4() -> Result<()> {
+        test(
+            "../client",
+            "sockets-client",
+            (Ipv4Addr::LOCALHOST, 0).into(),
+        )
+        .await
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn std() -> Result<()> {
-        test("../client-std", "sockets-client-std").await
+    async fn direct_ipv6() -> Result<()> {
+        use std::str::FromStr;
+        test(
+            "../client",
+            "sockets-client",
+            (Ipv6Addr::from_str("fdca:afee:fc4:0:4e2:cc3e:564b:e47a")?, 0).into(),
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn std_ipv4() -> Result<()> {
+        test(
+            "../client-std",
+            "sockets-client-std",
+            (Ipv4Addr::LOCALHOST, 0).into(),
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn std_ipv6() -> Result<()> {
+        use std::str::FromStr;
+        test(
+            "../client-std",
+            "sockets-client-std",
+            (Ipv6Addr::from_str("fdca:afee:fc4:0:4e2:cc3e:564b:e47a")?, 0).into(),
+        )
+        .await
     }
 }
