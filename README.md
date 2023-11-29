@@ -21,6 +21,8 @@ what this repository is intended to exercise as progress is made.
 - [client-std](./client-std): Rust test guest using `std::net`.  Note that, as
   of this writing, tests using this guest will fail unless you use forks of
   Rust, `wasi-libc`, and the WASI Preview 1 adapter as described below.
+- [client-tokio](./client-tokio): Rust test guest using `tokio::net`.  As with
+  `client-std`, you'll need to use the forks discussed below.
 
 ## Obtaining, building, and using the Rust, `wasi-libc`, and adapter forks
 
