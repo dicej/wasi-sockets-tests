@@ -13,7 +13,7 @@ use {
 fn main() -> Result<()> {
     let address = env::args()
         .nth(1)
-        .ok_or_else(|| anyhow!("expected ipv4 address CLI argument"))?;
+        .ok_or_else(|| anyhow!("expected IPv4 or IPv6 socket address CLI argument"))?;
 
     let address = if let Ok(address) = SocketAddrV6::from_str(&address) {
         SocketAddr::V6(address)
