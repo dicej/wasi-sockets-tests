@@ -2,6 +2,7 @@
 members = [
   "client",
   "client-std",
+  "client-tokio",  
   "server",
 ]
 resolver = "2"
@@ -15,7 +16,7 @@ edition = "2021"
 anyhow = { version = "1.0.75", features = ["backtrace"] }
 tokio = "1.34.0"
 tracing = { version = "0.1.40" }
-wit-component = "0.18.1"
+wit-component = "0.18.2"
 wasmtime = "14.0.4"
 wasmtime-wasi = "14.0.4"
 futures = "0.3.29"

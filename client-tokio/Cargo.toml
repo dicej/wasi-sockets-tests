@@ -1,0 +1,9 @@
+[package]
+name = "sockets-client-tokio"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+tokio = { git = "https://github.com/dicej/tokio", branch = "wasi-sockets", features = ["macros", "rt", "net", "io-util"] }

@@ -216,4 +216,24 @@ mod tests {
         )
         .await
     }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tokio_ipv4() -> Result<()> {
+        test(
+            "../client-tokio",
+            "sockets-client-tokio",
+            (Ipv4Addr::LOCALHOST, 0).into(),
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tokio_ipv6() -> Result<()> {
+        test(
+            "../client-tokio",
+            "sockets-client-tokio",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+        )
+        .await
+    }
 }
