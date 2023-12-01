@@ -23,6 +23,9 @@ what this repository is intended to exercise as progress is made.
   Rust, `wasi-libc`, and the WASI Preview 1 adapter as described below.
 - [client-tokio](./client-tokio): Rust test guest using `tokio::net`.  As with
   `client-std`, you'll need to use the forks discussed below.
+- [client-tokio-postgres](./client-tokio-postgres): Rust test guest using
+  `tokio-postgres` on top of `tokio::net`.  As with `client-std`, you'll need to
+  use the forks discussed below.
 
 ## Obtaining, building, and using the Rust, `wasi-libc`, and adapter forks
 

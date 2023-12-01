@@ -2,11 +2,7 @@
 
 use {
     anyhow::{anyhow, Result},
-    std::{
-        env,
-        net::{SocketAddr, SocketAddrV4, SocketAddrV6},
-        str::FromStr,
-    },
+    std::{env, net::SocketAddr, str::FromStr},
     tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::TcpStream,
@@ -15,15 +11,11 @@ use {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    let address = env::args()
-        .nth(1)
-        .ok_or_else(|| anyhow!("expected IPv4 or IPv6 socket address CLI argument"))?;
-
-    let address = if let Ok(address) = SocketAddrV6::from_str(&address) {
-        SocketAddr::V6(address)
-    } else {
-        SocketAddr::V4(SocketAddrV4::from_str(&address)?)
-    };
+    let address = SocketAddr::from_str(
+        &env::args()
+            .nth(1)
+            .ok_or_else(|| anyhow!("expected IPv4 or IPv6 socket address CLI argument"))?,
+    )?;
 
     let mut stream = TcpStream::connect(address).await?;
 

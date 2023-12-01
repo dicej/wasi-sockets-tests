@@ -8,7 +8,10 @@ edition = { workspace = true }
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "net", "rt"] }
 tracing = { workspace = true, features = ["log"] }
-futures = { workspace = true }
+futures.workspace = true
+postgres-protocol = "0.6.6"
+pgwire = "0.16.1"
+async-trait = "0.1.74"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["fs", "process", "macros", "rt-multi-thread"] }

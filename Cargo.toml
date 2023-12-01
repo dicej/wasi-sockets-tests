@@ -2,7 +2,8 @@
 members = [
   "client",
   "client-std",
-  "client-tokio",  
+  "client-tokio",
+  "client-tokio-postgres",    
   "server",
 ]
 resolver = "2"
@@ -22,3 +23,7 @@ wasmtime-wasi = "14.0.4"
 futures = "0.3.29"
 reqwest = "0.11.22"
 wit-bindgen = "0.14.0"
+
+[patch.crates-io]
+tokio = { git = "https://github.com/dicej/tokio", branch = "wasi-sockets" }
+tokio-postgres = { git = "https://github.com/dicej/rust-postgres", branch = "wasi-sockets" }

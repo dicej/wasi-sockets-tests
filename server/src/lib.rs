@@ -2,8 +2,21 @@
 
 use {
     anyhow::{Context, Error, Result},
-    futures::FutureExt,
-    std::{future::Future, net::SocketAddr},
+    async_trait::async_trait,
+    futures::{stream, FutureExt},
+    pgwire::{
+        api::{
+            auth::noop::NoopStartupHandler,
+            portal::{Format, Portal},
+            query::{ExtendedQueryHandler, SimpleQueryHandler, StatementOrPortal},
+            results::{DataRowEncoder, DescribeResponse, FieldInfo, QueryResponse, Response},
+            stmt::NoopQueryParser,
+            store::MemPortalStore,
+            ClientInfo, Type,
+        },
+        error::PgWireResult,
+    },
+    std::{future::Future, iter, net::SocketAddr, sync::Arc},
     tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::TcpListener,
@@ -12,7 +25,9 @@ use {
     tracing::log,
 };
 
-pub async fn serve(address: SocketAddr) -> Result<(impl Future<Output = Result<()>>, SocketAddr)> {
+pub async fn serve_echo(
+    address: SocketAddr,
+) -> Result<(impl Future<Output = Result<()>>, SocketAddr)> {
     let listener = TcpListener::bind(address)
         .await
         .with_context(|| format!("Unable to listen on {address}"))?;
@@ -35,6 +50,131 @@ pub async fn serve(address: SocketAddr) -> Result<(impl Future<Output = Result<(
 
                             stream.write_all(&buffer[..count]).await?;
                         }
+                    }
+                    .map(|result| {
+                        if let Err(e) = result {
+                            log::warn!("error handling connection: {e:?}");
+                        }
+                    }),
+                );
+            }
+        }
+        .boxed(),
+        address,
+    ))
+}
+
+#[derive(Default)]
+struct MyQueryHandler {
+    portal_store: Arc<MemPortalStore<String>>,
+    query_parser: Arc<NoopQueryParser>,
+}
+
+impl MyQueryHandler {
+    fn schema(format: &Format) -> Vec<FieldInfo> {
+        vec![FieldInfo::new(
+            "text".into(),
+            None,
+            None,
+            Type::TEXT,
+            format.format_for(0),
+        )]
+    }
+}
+
+#[async_trait]
+impl SimpleQueryHandler for MyQueryHandler {
+    async fn do_query<'a, C>(&self, _client: &C, _query: &'a str) -> PgWireResult<Vec<Response<'a>>>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        todo!()
+    }
+}
+
+#[async_trait]
+impl ExtendedQueryHandler for MyQueryHandler {
+    type Statement = String;
+    type QueryParser = NoopQueryParser;
+    type PortalStore = MemPortalStore<Self::Statement>;
+
+    fn portal_store(&self) -> Arc<Self::PortalStore> {
+        self.portal_store.clone()
+    }
+
+    fn query_parser(&self) -> Arc<Self::QueryParser> {
+        self.query_parser.clone()
+    }
+
+    async fn do_query<'a, C>(
+        &self,
+        _client: &mut C,
+        portal: &'a Portal<Self::Statement>,
+        _max_rows: usize,
+    ) -> PgWireResult<Response<'a>>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        let query = portal.statement().statement();
+        assert_eq!("SELECT $1::TEXT", query.as_str());
+
+        let parameters = portal.parameters();
+        assert_eq!(1, parameters.len());
+        assert_eq!(Some(b"hello world" as &[_]), parameters[0].as_deref());
+
+        let schema = Arc::new(Self::schema(&Format::UnifiedText));
+        let mut encoder = DataRowEncoder::new(schema.clone());
+        encoder.encode_field(&"hello world")?;
+        Ok(Response::Query(QueryResponse::new(
+            schema,
+            stream::iter(iter::once(encoder.finish())),
+        )))
+    }
+    async fn do_describe<C>(
+        &self,
+        _client: &mut C,
+        target: StatementOrPortal<'_, Self::Statement>,
+    ) -> PgWireResult<DescribeResponse>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        match target {
+            StatementOrPortal::Statement(_) => Ok(DescribeResponse::new(
+                Some(vec![Type::TEXT]),
+                Self::schema(&Format::UnifiedText),
+            )),
+            StatementOrPortal::Portal(portal) => Ok(DescribeResponse::new(
+                None,
+                Self::schema(portal.result_column_format()),
+            )),
+        }
+    }
+}
+
+pub async fn serve_postgres(
+    address: SocketAddr,
+) -> Result<(impl Future<Output = Result<()>>, SocketAddr)> {
+    let listener = TcpListener::bind(address)
+        .await
+        .with_context(|| format!("Unable to listen on {address}"))?;
+
+    let address = listener.local_addr()?;
+
+    Ok((
+        async move {
+            loop {
+                let (stream, _) = listener.accept().await?;
+
+                task::spawn(
+                    async move {
+                        pgwire::tokio::process_socket(
+                            stream,
+                            None,
+                            Arc::new(NoopStartupHandler),
+                            Arc::new(MyQueryHandler::default()),
+                            Arc::new(MyQueryHandler::default()),
+                        )
+                        .await
                     }
                     .map(|result| {
                         if let Err(e) = result {
@@ -90,7 +230,7 @@ mod tests {
     }
 
     async fn build_component(src_path: &str, name: &str) -> Result<Vec<u8>> {
-        let adapter_path = if let Some(path) = env::var("WASI_SOCKETS_TESTS_ADAPTER").ok() {
+        let adapter_path = if let Ok(path) = env::var("WASI_SOCKETS_TESTS_ADAPTER") {
             path
         } else {
             let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
@@ -133,11 +273,28 @@ mod tests {
         }
     }
 
-    async fn test(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
+    async fn test_postgres(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
+        test(src_path, name, async move { serve_postgres(address).await }).await
+    }
+
+    async fn test_echo(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
+        test(src_path, name, async move { serve_echo(address).await }).await
+    }
+
+    async fn test(
+        src_path: &str,
+        name: &str,
+        serve: impl Future<
+            Output = Result<(
+                impl Future<Output = Result<()>> + Unpin + Send + 'static,
+                SocketAddr,
+            )>,
+        >,
+    ) -> Result<()> {
         static ONCE: Once = Once::new();
         ONCE.call_once(pretty_env_logger::init);
 
-        let (server, address) = serve(address).await?;
+        let (server, address) = serve.await?;
 
         let (_tx, rx) = oneshot::channel::<()>();
 
@@ -179,7 +336,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn direct_ipv4() -> Result<()> {
-        test(
+        test_echo(
             "../client",
             "sockets-client",
             (Ipv4Addr::LOCALHOST, 0).into(),
@@ -189,7 +346,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn direct_ipv6() -> Result<()> {
-        test(
+        test_echo(
             "../client",
             "sockets-client",
             (Ipv6Addr::LOCALHOST, 0).into(),
@@ -199,7 +356,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn std_ipv4() -> Result<()> {
-        test(
+        test_echo(
             "../client-std",
             "sockets-client-std",
             (Ipv4Addr::LOCALHOST, 0).into(),
@@ -209,7 +366,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn std_ipv6() -> Result<()> {
-        test(
+        test_echo(
             "../client-std",
             "sockets-client-std",
             (Ipv6Addr::LOCALHOST, 0).into(),
@@ -219,7 +376,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn tokio_ipv4() -> Result<()> {
-        test(
+        test_echo(
             "../client-tokio",
             "sockets-client-tokio",
             (Ipv4Addr::LOCALHOST, 0).into(),
@@ -229,9 +386,19 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn tokio_ipv6() -> Result<()> {
-        test(
+        test_echo(
             "../client-tokio",
             "sockets-client-tokio",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tokio_postgres() -> Result<()> {
+        test_postgres(
+            "../client-tokio-postgres",
+            "sockets-client-tokio-postgres",
             (Ipv6Addr::LOCALHOST, 0).into(),
         )
         .await

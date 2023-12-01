@@ -1,9 +1,11 @@
 [package]
-name = "sockets-client-tokio"
+name = "sockets-client-tokio-postgres"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
 anyhow = { workspace = true }
+tokio-postgres = "0.7.10"
 tokio = { version = "1.34.0", features = ["macros", "rt", "net", "io-util"] }
+
