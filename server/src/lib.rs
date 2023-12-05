@@ -130,6 +130,7 @@ impl ExtendedQueryHandler for MyQueryHandler {
             stream::iter(iter::once(encoder.finish())),
         )))
     }
+
     async fn do_describe<C>(
         &self,
         _client: &mut C,

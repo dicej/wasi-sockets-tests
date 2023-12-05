@@ -1252,7 +1252,7 @@ dependencies = [
 [[package]]
 name = "mio"
 version = "0.8.9"
-source = "git+https://github.com/dicej/mio?branch=wasi-sockets#7437d2aede30efde93c7bd0a0ca89e376dba30a6"
+source = "git+https://github.com/dicej/mio?branch=wasi-sockets#d49f27281a0961974045304f1688de642f196df9"
 dependencies = [
  "libc",
  "windows-sys",
