@@ -199,8 +199,10 @@ mod tests {
         std::{
             env,
             net::{Ipv4Addr, Ipv6Addr},
+            path::Path,
             sync::Once,
         },
+        tempfile::NamedTempFile,
         tokio::{fs, process::Command},
         wasmtime::{
             component::{Component, Linker},
@@ -235,7 +237,7 @@ mod tests {
             path
         } else {
             let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
-                               /download/v14.0.4/wasi_snapshot_preview1.command.wasm";
+                               /download/v16.0.0/wasi_snapshot_preview1.command.wasm";
 
             let adapter_path = "../target/wasi_snapshot_preview1.command.wasm";
 
@@ -266,25 +268,51 @@ mod tests {
         {
             Ok(ComponentEncoder::default()
                 .validate(true)
-                .adapter("wasi_snapshot_preview1", &fs::read(adapter_path).await?)?
                 .module(&fs::read(format!("../target/wasm32-wasi/debug/{name}.wasm")).await?)?
+                .adapter("wasi_snapshot_preview1", &fs::read(adapter_path).await?)?
                 .encode()?)
         } else {
             Err(anyhow!("cargo build failed"))
         }
     }
 
+    async fn build_python_component(src_path: &str) -> Result<Vec<u8>> {
+        let tmp = NamedTempFile::new()?;
+        componentize_py::componentize(
+            &Path::new("../client/wit"),
+            Some("wasi:cli/command@0.2.0-rc-2023-12-05"),
+            &[src_path],
+            "app",
+            tmp.path(),
+            None,
+        )
+        .await?;
+        Ok(fs::read(tmp.path()).await?)
+    }
+
     async fn test_postgres(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
-        test(src_path, name, async move { serve_postgres(address).await }).await
+        test(&build_component(src_path, name).await?, async move {
+            serve_postgres(address).await
+        })
+        .await
     }
 
     async fn test_echo(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
-        test(src_path, name, async move { serve_echo(address).await }).await
+        test(&build_component(src_path, name).await?, async move {
+            serve_echo(address).await
+        })
+        .await
+    }
+
+    async fn test_python_echo(src_path: &str, address: SocketAddr) -> Result<()> {
+        test(&build_python_component(src_path).await?, async move {
+            serve_echo(address).await
+        })
+        .await
     }
 
     async fn test(
-        src_path: &str,
-        name: &str,
+        component: &[u8],
         serve: impl Future<
             Output = Result<(
                 impl Future<Output = Result<()>> + Unpin + Send + 'static,
@@ -309,7 +337,7 @@ mod tests {
 
         let engine = Engine::new(&config)?;
 
-        let component = Component::new(&engine, build_component(src_path, name).await?)?;
+        let component = Component::new(&engine, &component)?;
 
         let mut linker = Linker::new(&engine);
 
@@ -403,5 +431,15 @@ mod tests {
             (Ipv6Addr::LOCALHOST, 0).into(),
         )
         .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn python_ipv4() -> Result<()> {
+        test_python_echo("../client-python", (Ipv4Addr::LOCALHOST, 0).into()).await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn python_ipv6() -> Result<()> {
+        test_python_echo("../client-python", (Ipv6Addr::LOCALHOST, 0).into()).await
     }
 }

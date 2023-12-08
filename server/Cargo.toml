@@ -12,6 +12,7 @@ futures.workspace = true
 postgres-protocol = "0.6.6"
 pgwire = "0.16.1"
 async-trait = "0.1.74"
+tempfile = "3.8.1"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["fs", "process", "macros", "rt-multi-thread"] }
@@ -20,3 +21,4 @@ wasmtime = { workspace = true, features = ["component-model"] }
 wasmtime-wasi = { workspace = true }
 reqwest = { workspace = true }
 pretty_env_logger = "0.5.0"
+componentize-py = { git = "https://github.com/bytecodealliance/componentize-py", branch = "update-all-the-things" }

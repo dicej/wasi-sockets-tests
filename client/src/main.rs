@@ -1,19 +1,16 @@
 #![deny(warnings)]
 
-wit_bindgen::generate!("preview1-adapter-reactor" in "wit");
+wit_bindgen::generate!("reactor" in "wit");
 
 use {
     anyhow::{anyhow, Result},
     std::{env, net::SocketAddr, str::FromStr},
-    wasi::{
-        io::poll,
-        sockets::{
-            instance_network,
-            network::{
-                ErrorCode, IpAddressFamily, IpSocketAddress, Ipv4SocketAddress, Ipv6SocketAddress,
-            },
-            tcp_create_socket,
+    wasi::sockets::{
+        instance_network,
+        network::{
+            ErrorCode, IpAddressFamily, IpSocketAddress, Ipv4SocketAddress, Ipv6SocketAddress,
         },
+        tcp_create_socket,
     },
 };
 
@@ -53,7 +50,7 @@ fn main() -> Result<()> {
 
     let (rx, tx) = loop {
         match client.finish_connect() {
-            Err(ErrorCode::WouldBlock) => poll::poll_one(&client.subscribe()),
+            Err(ErrorCode::WouldBlock) => client.subscribe().block(),
             result => break result,
         }
     }?;

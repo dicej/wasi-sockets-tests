@@ -26,6 +26,9 @@ what this repository is intended to exercise as progress is made.
 - [client-tokio-postgres](./client-tokio-postgres): Rust test guest using
   `tokio-postgres` on top of `tokio::net`.  As with `client-std`, you'll need to
   use the forks discussed below.
+- [client-python](./client-python): Python test using `asyncio`, built as a
+  component by
+  [componentize-py](https://github.com/bytecodealliance/componentize-py)
 
 ## Obtaining, building, and using the Rust, `wasi-libc`, and adapter forks
 
@@ -79,7 +82,7 @@ clone of this repo and run the tests:
 
 ```shell
 cd server
-cargo test
+cargo test --release
 ```
 
 All tests should pass.  If they don't, please open an issue on this repo.
