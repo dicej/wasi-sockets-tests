@@ -58,14 +58,12 @@ cd wasi-sdk
 git submodule update --init --recursive
 make build/libcxx.BUILT
 # temporary, until we have a real `wasm32-wasi-preview2` target:
-mv build/install/opt/wasi-sdk/share/wasi-sysroot/share/wasm32-wasi \
-    build/install/opt/wasi-sdk/share/wasi-sysroot/share/wasm32-wasi-preview1 && \
-mv build/install/opt/wasi-sdk/share/wasi-sysroot/lib/wasm32-wasi \
-    build/install/opt/wasi-sdk/share/wasi-sysroot/lib/wasm32-wasi-preview1 && \
-mv build/install/opt/wasi-sdk/share/wasi-sysroot/share/wasm32-wasi-preview2 \
-    build/install/opt/wasi-sdk/share/wasi-sysroot/share/wasm32-wasi && \
-mv build/install/opt/wasi-sdk/share/wasi-sysroot/lib/wasm32-wasi-preview2 \
-    build/install/opt/wasi-sdk/share/wasi-sysroot/lib/wasm32-wasi
+for x in include share lib; do \
+    mv build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi \
+        build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi-preview1 && \
+    mv build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi-preview2 \
+        build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi; \
+done
 export WASI_SDK_SYSROOT=$(pwd)/build/install/opt/wasi-sdk/share/wasi-sysroot
 cd ..
 git clone https://github.com/dicej/rust -b sockets
