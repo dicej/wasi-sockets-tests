@@ -4,7 +4,6 @@ members = [
   "client-std",
   "client-tokio",
   "client-tokio-postgres",    
-  "server",
 ]
 resolver = "2"
 
@@ -16,12 +15,7 @@ edition = "2021"
 [workspace.dependencies]
 anyhow = { version = "1.0.75", features = ["backtrace"] }
 tokio = "1.34.0"
-tracing = { version = "0.1.40" }
-wit-component = "0.19.0"
-wasmtime =  { git = "https://github.com/bytecodealliance/wasmtime", branch = "release-16.0.0", features = [ "component-model" ] }
-wasmtime-wasi = { git = "https://github.com/bytecodealliance/wasmtime", branch = "release-16.0.0" }
 futures = "0.3.29"
-reqwest = "0.11.22"
 wit-bindgen = "0.16.0"
 
 [patch.crates-io]

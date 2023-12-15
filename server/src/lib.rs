@@ -290,28 +290,49 @@ mod tests {
         Ok(fs::read(tmp.path()).await?)
     }
 
-    async fn test_postgres(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
-        test(&build_component(src_path, name).await?, async move {
-            serve_postgres(address).await
-        })
+    async fn test_postgres(
+        src_path: &str,
+        name: &str,
+        address: SocketAddr,
+        hostname: Option<&str>,
+    ) -> Result<()> {
+        test(
+            hostname,
+            &build_component(src_path, name).await?,
+            async move { serve_postgres(address).await },
+        )
         .await
     }
 
-    async fn test_echo(src_path: &str, name: &str, address: SocketAddr) -> Result<()> {
-        test(&build_component(src_path, name).await?, async move {
-            serve_echo(address).await
-        })
+    async fn test_echo(
+        src_path: &str,
+        name: &str,
+        address: SocketAddr,
+        hostname: Option<&str>,
+    ) -> Result<()> {
+        test(
+            hostname,
+            &build_component(src_path, name).await?,
+            async move { serve_echo(address).await },
+        )
         .await
     }
 
-    async fn test_python_echo(src_path: &str, address: SocketAddr) -> Result<()> {
-        test(&build_python_component(src_path).await?, async move {
-            serve_echo(address).await
-        })
+    async fn test_python_echo(
+        src_path: &str,
+        address: SocketAddr,
+        hostname: Option<&str>,
+    ) -> Result<()> {
+        test(
+            hostname,
+            &build_python_component(src_path).await?,
+            async move { serve_echo(address).await },
+        )
         .await
     }
 
     async fn test(
+        hostname: Option<&str>,
         component: &[u8],
         serve: impl Future<
             Output = Result<(
@@ -347,8 +368,13 @@ mod tests {
         let wasi = WasiCtxBuilder::new()
             .inherit_stdio()
             .inherit_network(wasmtime_wasi::ambient_authority())
+            .allow_ip_name_lookup(true)
             .arg("sockets-client")
-            .arg(format!("{address}"))
+            .arg(
+                hostname
+                    .map(|h| format!("{h}:{}", address.port()))
+                    .unwrap_or_else(|| format!("{address}")),
+            )
             .build();
 
         let mut store = Store::new(&engine, SocketsCtx { table, wasi });
@@ -369,6 +395,7 @@ mod tests {
             "../client",
             "sockets-client",
             (Ipv4Addr::LOCALHOST, 0).into(),
+            None,
         )
         .await
     }
@@ -379,6 +406,18 @@ mod tests {
             "../client",
             "sockets-client",
             (Ipv6Addr::LOCALHOST, 0).into(),
+            None,
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn direct_name() -> Result<()> {
+        test_echo(
+            "../client",
+            "sockets-client",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
         )
         .await
     }
@@ -389,6 +428,7 @@ mod tests {
             "../client-std",
             "sockets-client-std",
             (Ipv4Addr::LOCALHOST, 0).into(),
+            None,
         )
         .await
     }
@@ -399,6 +439,18 @@ mod tests {
             "../client-std",
             "sockets-client-std",
             (Ipv6Addr::LOCALHOST, 0).into(),
+            None,
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn std_name() -> Result<()> {
+        test_echo(
+            "../client-std",
+            "sockets-client-std",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
         )
         .await
     }
@@ -409,6 +461,7 @@ mod tests {
             "../client-tokio",
             "sockets-client-tokio",
             (Ipv4Addr::LOCALHOST, 0).into(),
+            None,
         )
         .await
     }
@@ -419,6 +472,18 @@ mod tests {
             "../client-tokio",
             "sockets-client-tokio",
             (Ipv6Addr::LOCALHOST, 0).into(),
+            None,
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tokio_name() -> Result<()> {
+        test_echo(
+            "../client-tokio",
+            "sockets-client-tokio",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
         )
         .await
     }
@@ -429,17 +494,39 @@ mod tests {
             "../client-tokio-postgres",
             "sockets-client-tokio-postgres",
             (Ipv6Addr::LOCALHOST, 0).into(),
+            None,
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn tokio_postgres_name() -> Result<()> {
+        test_postgres(
+            "../client-tokio-postgres",
+            "sockets-client-tokio-postgres",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
         )
         .await
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn python_ipv4() -> Result<()> {
-        test_python_echo("../client-python", (Ipv4Addr::LOCALHOST, 0).into()).await
+        test_python_echo("../client-python", (Ipv4Addr::LOCALHOST, 0).into(), None).await
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn python_ipv6() -> Result<()> {
-        test_python_echo("../client-python", (Ipv6Addr::LOCALHOST, 0).into()).await
+        test_python_echo("../client-python", (Ipv6Addr::LOCALHOST, 0).into(), None).await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn python_name() -> Result<()> {
+        test_python_echo(
+            "../client-python",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
+        )
+        .await
     }
 }

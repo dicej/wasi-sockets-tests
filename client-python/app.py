@@ -1,9 +1,13 @@
+# Workaround for https://github.com/bytecodealliance/componentize-py/issues/23:
+from encodings import idna
+
 import sys
 import asyncio
+import socket
 import ipaddress
 from ipaddress import IPv4Address, IPv6Address
 from command import exports
-from typing import Tuple
+from typing import Tuple, Sequence
 
 class Run(exports.Run):
     def run(self):
@@ -12,26 +16,37 @@ class Run(exports.Run):
             print(f"usage: tcp <address>:<port>", file=sys.stderr)
             exit(-1)
 
-        address, port = parse_address_and_port(args[0])
-        asyncio.run(send_and_receive(address, port))
+        addresses, port = resolve(args[0])
+        asyncio.run(send_and_receive(addresses, port))
 
 IPAddress = IPv4Address | IPv6Address
         
-def parse_address_and_port(address_and_port: str) -> Tuple[IPAddress, int]:
-    ip, separator, port = address_and_port.rpartition(':')
+def resolve(address_and_port: str) -> Tuple[Sequence[IPAddress], int]:
+    host, separator, port = address_and_port.rpartition(':')
     assert separator
-    return (ipaddress.ip_address(ip.strip("[]")), int(port))
+    try:
+        return ([ipaddress.ip_address(host.strip("[]"))], int(port))
+    except ValueError:
+        return (list(map(lambda tuple: ipaddress.ip_address(tuple[4][0]), socket.getaddrinfo(host, None))), int(port))
         
-async def send_and_receive(address: IPAddress, port: int):
-    rx, tx = await asyncio.open_connection(str(address), port)
+async def send_and_receive(addresses: Sequence[IPAddress], port: int):
+    for address in addresses:
+        try:
+            rx, tx = await asyncio.open_connection(str(address), port)
+        except:
+            continue
 
-    message = b"So rested he by the Tumtum tree" 
-    tx.write(message)
-    await tx.drain()
+        message = b"So rested he by the Tumtum tree" 
+        tx.write(message)
+        await tx.drain()
 
-    data = await rx.read(1024)
-    assert message == data
+        data = await rx.read(1024)
+        assert message == data
 
-    tx.close()
-    await tx.wait_closed()
+        tx.close()
+        await tx.wait_closed()
+
+        return
+
+    raise Exception(f"unable to connect to {addresses}")
     

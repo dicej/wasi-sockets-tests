@@ -1,35 +1,42 @@
 #![deny(warnings)]
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     std::{
         env,
         io::{Read, Write},
-        net::{SocketAddr, SocketAddrV4, SocketAddrV6, TcpStream},
+        net::{SocketAddr, TcpStream, ToSocketAddrs},
         str::FromStr,
     },
 };
 
 fn main() -> Result<()> {
-    let address = env::args()
-        .nth(1)
-        .ok_or_else(|| anyhow!("expected IPv4 or IPv6 socket address CLI argument"))?;
+    let address = &env::args().nth(1).ok_or_else(|| {
+        anyhow!("expected IPv4 or IPv6 socket address or <hostname>:<port> as CLI argument")
+    })?;
 
-    let address = if let Ok(address) = SocketAddrV6::from_str(&address) {
-        SocketAddr::V6(address)
+    let addresses = if let Ok(address) = SocketAddr::from_str(address) {
+        vec![address]
     } else {
-        SocketAddr::V4(SocketAddrV4::from_str(&address)?)
+        address
+            .to_socket_addrs()
+            .with_context(|| format!("unable to resolve {address:?}"))?
+            .collect::<Vec<_>>()
     };
 
-    let mut stream = TcpStream::connect(address)?;
+    for address in addresses {
+        if let Ok(mut stream) = TcpStream::connect(address) {
+            let message = b"So rested he by the Tumtum tree";
+            stream.write_all(message)?;
 
-    let message = b"So rested he by the Tumtum tree";
-    stream.write_all(message)?;
+            let mut buffer = vec![0; message.len()];
+            stream.read_exact(&mut buffer)?;
 
-    let mut buffer = vec![0; message.len()];
-    stream.read_exact(&mut buffer)?;
+            assert_eq!(message.as_slice(), &buffer);
 
-    assert_eq!(message.as_slice(), &buffer);
+            return Ok(());
+        }
+    }
 
-    Ok(())
+    Err(anyhow!("unable to connect to {address:?}"))
 }
