@@ -16,20 +16,27 @@ class Run(exports.Run):
             print(f"usage: tcp <address>:<port>", file=sys.stderr)
             exit(-1)
 
-        addresses, port = resolve(args[0])
-        asyncio.run(send_and_receive(addresses, port))
+        asyncio.run(send_and_receive(args[0]))
 
-IPAddress = IPv4Address | IPv6Address
-        
-def resolve(address_and_port: str) -> Tuple[Sequence[IPAddress], int]:
+async def resolve(address_and_port: str) -> Tuple[Sequence[IPv4Address | IPv6Address], int]:
     host, separator, port = address_and_port.rpartition(':')
     assert separator
     try:
         return ([ipaddress.ip_address(host.strip("[]"))], int(port))
     except ValueError:
-        return (list(map(lambda tuple: ipaddress.ip_address(tuple[4][0]), socket.getaddrinfo(host, None))), int(port))
+        # Ideally, we'd use `await asyncio.get_event_loop().getaddrinfo(host,
+        # None)` here, but that requires
+        # `concurrent.futures.ThreadPoolExecutor`, which requires
+        # multithreading.  In the future, we could patch `asyncio` to use
+        # `wasi:sockets/ip-name-lookup` directly instead of going through
+        # `getaddrinfo`, which would allow it to be async without
+        # multithreading.
+        addresses = socket.getaddrinfo(host, None)
+        return (list(map(lambda tuple: ipaddress.ip_address(tuple[4][0]), addresses)), int(port))
         
-async def send_and_receive(addresses: Sequence[IPAddress], port: int):
+async def send_and_receive(address: str):
+    addresses, port = await resolve(address)
+
     for address in addresses:
         try:
             rx, tx = await asyncio.open_connection(str(address), port)
