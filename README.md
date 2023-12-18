@@ -53,6 +53,7 @@ that?
 TODO #2: Can we speed up the Rust build by excluding tools we don't need?
 
 ```shell
+git submodule update --init --recursive
 git clone https://github.com/dicej/wasi-sdk -b sockets
 cd wasi-sdk
 git submodule update --init --recursive

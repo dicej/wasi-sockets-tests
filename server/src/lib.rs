@@ -1,9 +1,13 @@
 #![deny(warnings)]
 
 use {
-    anyhow::{Context, Error, Result},
+    anyhow::{anyhow, Context, Error, Result},
     async_trait::async_trait,
-    futures::{stream, FutureExt},
+    bytes::{Buf, Bytes, BytesMut},
+    futures::{
+        stream::{self, SplitSink},
+        FutureExt, SinkExt, StreamExt, TryStreamExt,
+    },
     pgwire::{
         api::{
             auth::noop::NoopStartupHandler,
@@ -16,12 +20,15 @@ use {
         },
         error::PgWireResult,
     },
-    std::{future::Future, iter, net::SocketAddr, sync::Arc},
+    redis_protocol::resp3::{decode, encode, types::Frame},
+    std::{collections::HashMap, future::Future, iter, net::SocketAddr, ops::Deref, sync::Arc},
     tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::TcpListener,
+        sync::Mutex as AsyncMutex,
         task,
     },
+    tokio_util::codec::{Decoder, Encoder, Framed},
     tracing::log,
 };
 
@@ -190,6 +197,153 @@ pub async fn serve_postgres(
     ))
 }
 
+pub struct RedisCodec;
+
+impl Decoder for RedisCodec {
+    type Item = Frame;
+    type Error = anyhow::Error;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Frame>> {
+        let bytes = Bytes::copy_from_slice(src);
+        Ok(
+            if let Some((frame, length)) =
+                decode::complete::decode(&bytes).map_err(|e| anyhow!("{e}"))?
+            {
+                src.advance(length);
+                Some(frame)
+            } else {
+                None
+            },
+        )
+    }
+}
+
+impl Encoder<Frame> for RedisCodec {
+    type Error = anyhow::Error;
+
+    fn encode(&mut self, frame: Frame, dst: &mut BytesMut) -> Result<()> {
+        let mut buffer = vec![0; 256];
+        let length =
+            encode::complete::encode(&mut buffer, 0, &frame).map_err(|e| anyhow!("{e}"))?;
+        dst.extend_from_slice(&buffer[..length]);
+        Ok(())
+    }
+}
+
+pub async fn serve_redis(
+    address: SocketAddr,
+) -> Result<(impl Future<Output = Result<()>>, SocketAddr)> {
+    let listener = TcpListener::bind(address)
+        .await
+        .with_context(|| format!("Unable to listen on {address}"))?;
+
+    let address = listener.local_addr()?;
+
+    let handle = |tx: Arc<AsyncMutex<SplitSink<_, _>>>, frame: Frame| async move {
+        let unexpected = || Err(anyhow!("don't know how to handle frame: {frame:?}"));
+
+        match &frame {
+            Frame::Array { data, .. } => match data.as_slice() {
+                [Frame::BlobString { data, .. }] => match data.deref() {
+                    b"PING" => {
+                        tx.lock()
+                            .await
+                            .send(Frame::SimpleString {
+                                data: Bytes::copy_from_slice(b"PONG"),
+                                attributes: None,
+                            })
+                            .await?;
+                    }
+                    _ => return unexpected(),
+                },
+                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }] => {
+                    match (data1.deref(), data2.deref()) {
+                        (b"GET", b"foo") => {
+                            tx.lock()
+                                .await
+                                .send(Frame::BlobString {
+                                    data: Bytes::copy_from_slice(b"bar"),
+                                    attributes: None,
+                                })
+                                .await?;
+                        }
+                        (b"COMMAND", b"DOCS") => {
+                            tx.lock()
+                                .await
+                                .send(Frame::Map {
+                                    data: HashMap::new(),
+                                    attributes: None,
+                                })
+                                .await?;
+                        }
+                        _ => return unexpected(),
+                    }
+                }
+                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { data: data3, .. }] => {
+                    match (data1.deref(), data2.deref(), data3.deref()) {
+                        (b"SET", b"foo", b"bar") => {
+                            tx.lock()
+                                .await
+                                .send(Frame::SimpleString {
+                                    data: Bytes::copy_from_slice(b"OK"),
+                                    attributes: None,
+                                })
+                                .await?;
+                        }
+                        _ => return unexpected(),
+                    }
+                }
+                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { data: data3, .. }, Frame::BlobString { data: data4, .. }] => {
+                    match (data1.deref(), data2.deref(), data3.deref(), data4.deref()) {
+                        (b"CLIENT", b"SETINFO", _, _) => {
+                            tx.lock()
+                                .await
+                                .send(Frame::SimpleString {
+                                    data: Bytes::copy_from_slice(b"OK"),
+                                    attributes: None,
+                                })
+                                .await?;
+                        }
+                        _ => return unexpected(),
+                    }
+                }
+                _ => return unexpected(),
+            },
+            _ => return unexpected(),
+        }
+
+        Ok(())
+    };
+
+    Ok((
+        async move {
+            loop {
+                let (stream, _) = listener.accept().await?;
+
+                task::spawn(
+                    async move {
+                        let (tx, mut rx) = Framed::new(stream, RedisCodec).split();
+                        let tx = Arc::new(AsyncMutex::new(tx));
+
+                        while let Some(frame) = rx.try_next().await? {
+                            handle(tx.clone(), frame).await?;
+                        }
+
+                        Ok::<_, Error>(())
+                    }
+                    .map(|result| {
+                        if let Err(e) = result {
+                            log::warn!("error handling connection: {e:?}");
+                        }
+                    }),
+                );
+            }
+        }
+        .boxed(),
+        address,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -278,10 +432,11 @@ mod tests {
 
     async fn build_python_component(src_path: &str) -> Result<Vec<u8>> {
         let tmp = NamedTempFile::new()?;
+        let path = vec![src_path.into(), format!("{src_path}/redis-py")];
         componentize_py::componentize(
-            &Path::new("../client/wit"),
+            Path::new("../client/wit"),
             Some("wasi:cli/command@0.2.0-rc-2023-12-05"),
-            &[src_path],
+            &path.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
             "app",
             tmp.path(),
             None,
@@ -331,6 +486,19 @@ mod tests {
         .await
     }
 
+    async fn test_python_redis(
+        src_path: &str,
+        address: SocketAddr,
+        hostname: Option<&str>,
+    ) -> Result<()> {
+        test(
+            hostname,
+            &build_python_component(src_path).await?,
+            async move { serve_redis(address).await },
+        )
+        .await
+    }
+
     async fn test(
         hostname: Option<&str>,
         component: &[u8],
@@ -341,6 +509,8 @@ mod tests {
             )>,
         >,
     ) -> Result<()> {
+        std::fs::write("/tmp/component.wasm", component)?;
+
         static ONCE: Once = Once::new();
         ONCE.call_once(pretty_env_logger::init);
 
@@ -358,7 +528,7 @@ mod tests {
 
         let engine = Engine::new(&config)?;
 
-        let component = Component::new(&engine, &component)?;
+        let component = Component::new(&engine, component)?;
 
         let mut linker = Linker::new(&engine);
 
@@ -524,6 +694,26 @@ mod tests {
     async fn python_name() -> Result<()> {
         test_python_echo(
             "../client-python",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            Some("localhost"),
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn python_redis() -> Result<()> {
+        test_python_redis(
+            "../client-python-redis",
+            (Ipv6Addr::LOCALHOST, 0).into(),
+            None,
+        )
+        .await
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn python_redis_name() -> Result<()> {
+        test_python_redis(
+            "../client-python-redis",
             (Ipv6Addr::LOCALHOST, 0).into(),
             Some("localhost"),
         )
