@@ -293,9 +293,9 @@ pub async fn serve_redis(
                         _ => return unexpected(),
                     }
                 }
-                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { data: data3, .. }, Frame::BlobString { data: data4, .. }] => {
-                    match (data1.deref(), data2.deref(), data3.deref(), data4.deref()) {
-                        (b"CLIENT", b"SETINFO", _, _) => {
+                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { .. }, Frame::BlobString { .. }] => {
+                    match (data1.deref(), data2.deref()) {
+                        (b"CLIENT", b"SETINFO") => {
                             tx.lock()
                                 .await
                                 .send(Frame::SimpleString {
@@ -430,13 +430,12 @@ mod tests {
         }
     }
 
-    async fn build_python_component(src_path: &str) -> Result<Vec<u8>> {
+    async fn build_python_component(src_paths: &[&str]) -> Result<Vec<u8>> {
         let tmp = NamedTempFile::new()?;
-        let path = vec![src_path.into(), format!("{src_path}/redis-py")];
         componentize_py::componentize(
-            Path::new("../client/wit"),
+            Some(Path::new("../client/wit")),
             Some("wasi:cli/command@0.2.0-rc-2023-12-05"),
-            &path.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            &src_paths,
             "app",
             tmp.path(),
             None,
@@ -474,26 +473,26 @@ mod tests {
     }
 
     async fn test_python_echo(
-        src_path: &str,
+        src_paths: &[&str],
         address: SocketAddr,
         hostname: Option<&str>,
     ) -> Result<()> {
         test(
             hostname,
-            &build_python_component(src_path).await?,
+            &build_python_component(src_paths).await?,
             async move { serve_echo(address).await },
         )
         .await
     }
 
     async fn test_python_redis(
-        src_path: &str,
+        src_paths: &[&str],
         address: SocketAddr,
         hostname: Option<&str>,
     ) -> Result<()> {
         test(
             hostname,
-            &build_python_component(src_path).await?,
+            &build_python_component(src_paths).await?,
             async move { serve_redis(address).await },
         )
         .await
@@ -682,18 +681,18 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn python_ipv4() -> Result<()> {
-        test_python_echo("../client-python", (Ipv4Addr::LOCALHOST, 0).into(), None).await
+        test_python_echo(&["../client-python"], (Ipv4Addr::LOCALHOST, 0).into(), None).await
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn python_ipv6() -> Result<()> {
-        test_python_echo("../client-python", (Ipv6Addr::LOCALHOST, 0).into(), None).await
+        test_python_echo(&["../client-python"], (Ipv6Addr::LOCALHOST, 0).into(), None).await
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn python_name() -> Result<()> {
         test_python_echo(
-            "../client-python",
+            &["../client-python"],
             (Ipv6Addr::LOCALHOST, 0).into(),
             Some("localhost"),
         )
@@ -703,7 +702,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn python_redis() -> Result<()> {
         test_python_redis(
-            "../client-python-redis",
+            &["../client-python-redis", "../client-python-redis/redis-py"],
             (Ipv6Addr::LOCALHOST, 0).into(),
             None,
         )
@@ -713,7 +712,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn python_redis_name() -> Result<()> {
         test_python_redis(
-            "../client-python-redis",
+            &["../client-python-redis", "../client-python-redis/redis-py"],
             (Ipv6Addr::LOCALHOST, 0).into(),
             Some("localhost"),
         )
