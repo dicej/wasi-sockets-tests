@@ -1,0 +1,9 @@
+[package]
+name = "sockets-spin"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+wit-bindgen = { workspace = true }
