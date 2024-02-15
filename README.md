@@ -30,7 +30,7 @@ what this repository is intended to exercise as progress is made.
   component by
   [componentize-py](https://github.com/bytecodealliance/componentize-py)
 
-## Obtaining, building, and using the Rust, `wasi-libc`, and adapter forks
+## Building and running
 
 ### Prerequisites
 
