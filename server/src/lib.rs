@@ -359,23 +359,23 @@ mod tests {
         tempfile::NamedTempFile,
         tokio::{fs, process::Command},
         wasmtime::{
-            component::{Component, Linker},
+            component::{Component, Linker, ResourceTable},
             Config, Engine, Store,
         },
-        wasmtime_wasi::preview2::{command, Table, WasiCtx, WasiCtxBuilder, WasiView},
+        wasmtime_wasi::preview2::{command, WasiCtx, WasiCtxBuilder, WasiView},
         wit_component::ComponentEncoder,
     };
 
     struct SocketsCtx {
-        table: Table,
+        table: ResourceTable,
         wasi: WasiCtx,
     }
 
     impl WasiView for SocketsCtx {
-        fn table(&self) -> &Table {
+        fn table(&self) -> &ResourceTable {
             &self.table
         }
-        fn table_mut(&mut self) -> &mut Table {
+        fn table_mut(&mut self) -> &mut ResourceTable {
             &mut self.table
         }
         fn ctx(&self) -> &WasiCtx {
@@ -391,7 +391,7 @@ mod tests {
             path
         } else {
             let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
-                               /download/v16.0.0/wasi_snapshot_preview1.command.wasm";
+                               /download/v17.0.0/wasi_snapshot_preview1.command.wasm";
 
             let adapter_path = "../target/wasi_snapshot_preview1.command.wasm";
 
@@ -434,7 +434,7 @@ mod tests {
         let tmp = NamedTempFile::new()?;
         componentize_py::componentize(
             Some(Path::new("../client/wit")),
-            Some("wasi:cli/command@0.2.0-rc-2023-12-05"),
+            Some("wasi:cli/command@0.2.0"),
             &src_paths,
             "app",
             tmp.path(),
@@ -533,10 +533,10 @@ mod tests {
 
         command::add_to_linker(&mut linker)?;
 
-        let table = Table::new();
+        let table = ResourceTable::new();
         let wasi = WasiCtxBuilder::new()
             .inherit_stdio()
-            .inherit_network(wasmtime_wasi::ambient_authority())
+            .inherit_network()
             .allow_ip_name_lookup(true)
             .arg("sockets-client")
             .arg(

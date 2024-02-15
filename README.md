@@ -20,7 +20,7 @@ what this repository is intended to exercise as progress is made.
   directly
 - [client-std](./client-std): Rust test guest using `std::net`.  Note that, as
   of this writing, tests using this guest will fail unless you use forks of
-  Rust, `wasi-libc`, and the WASI Preview 1 adapter as described below.
+  Rust and `wasi-libc` as described below.
 - [client-tokio](./client-tokio): Rust test guest using `tokio::net`.  As with
   `client-std`, you'll need to use the forks discussed below.
 - [client-tokio-postgres](./client-tokio-postgres): Rust test guest using
@@ -35,37 +35,22 @@ what this repository is intended to exercise as progress is made.
 ### Prerequisites
 
 - Unix-style host (e.g. Linux, MacOS, Mingw, WSL2)
-- CMake
-- Clang
-- Ninja
 - Python
 - Rust (with the `wasm32-wasi` and `wasm32-unknown-unknown` targets installed)
 
 In the commands that follow, replace `aarch64-apple-darwin` with your host
-platform's target triple.
+platform's target triple, and replace `macos` with `linux` or `mingw` (Windows)
+as appropriate.
 
-Note that cloning the `llvm-project` submodule of `wasi-sdk` and the `rust` repo
-may both take a _long_ time.
+Note that cloning the `llvm-project` submodule of the `rust` repo may both take
+a _long_ time.
 
-TODO: The following will build LLVM twice, which is annoying.  Can we avoid
-that?
-
-TODO #2: Can we speed up the Rust build by excluding tools we don't need?
+TODO: Can we speed up the Rust build by excluding tools we don't need?
 
 ```shell
-git submodule update --init --recursive
-git clone https://github.com/dicej/wasi-sdk -b sockets
-cd wasi-sdk
-git submodule update --init --recursive
-make build/libcxx.BUILT
-# temporary, until we have a real `wasm32-wasi-preview2` target:
-for x in include share lib; do \
-    mv build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi \
-        build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi-preview1 && \
-    mv build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi-preview2 \
-        build/install/opt/wasi-sdk/share/wasi-sysroot/$x/wasm32-wasi; \
-done
-export WASI_SDK_SYSROOT=$(pwd)/build/install/opt/wasi-sdk/share/wasi-sysroot
+curl -LO https://github.com/dicej/wasi-sdk/releases/download/wasi-sockets-alpha-2/wasi-sdk-20.26g68203b20b82e-macos.tar.gz
+tar xf wasi-sdk-20.26g68203b20b82e-macos.tar.gz
+export WASI_SDK_SYSROOT=$(pwd)/wasi-sdk-20.26g68203b20b82e/share/wasi-sysroot
 cd ..
 git clone https://github.com/dicej/rust -b sockets
 cd rust
@@ -76,12 +61,6 @@ cd rust
 ./x.py build --stage 1
 rustup toolchain link wasi-sockets build/host/stage1
 export WASI_SOCKETS_TESTS_TOOLCHAIN=wasi-sockets
-cd ..
-git clone https://github.com/dicej/wasmtime -b adapter-open-badfd
-cd wasmtime
-git submodule update --init --recursive
-bash ci/build-wasi-preview1-component-adapter.sh
-export WASI_SOCKETS_TESTS_ADAPTER=$(pwd)/target/wasm32-unknown-unknown/release/wasi_snapshot_preview1.command.wasm
 cd ..
 ```
 

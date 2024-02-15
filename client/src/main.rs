@@ -20,7 +20,7 @@ use {
 };
 
 fn resolve(network: &Network, address: &str) -> Result<Vec<IpSocketAddress>> {
-    Ok(if let Ok(address) = SocketAddr::from_str(&address) {
+    Ok(if let Ok(address) = SocketAddr::from_str(address) {
         vec![match address {
             SocketAddr::V6(address) => {
                 let ip = address.ip().segments();
@@ -57,7 +57,7 @@ fn resolve(network: &Network, address: &str) -> Result<Vec<IpSocketAddress>> {
             IpAddress::Ipv4(address) => IpSocketAddress::Ipv4(Ipv4SocketAddress { address, port }),
         };
 
-        let stream = ip_name_lookup::resolve_addresses(&network, hostname).with_context(context)?;
+        let stream = ip_name_lookup::resolve_addresses(network, hostname).with_context(context)?;
         let mut addresses = Vec::new();
         loop {
             match stream.resolve_next_address() {
@@ -79,7 +79,7 @@ fn connect(
         IpSocketAddress::Ipv4(_) => IpAddressFamily::Ipv4,
     })?;
 
-    client.start_connect(&network, address)?;
+    client.start_connect(network, address)?;
     Ok(loop {
         match client.finish_connect() {
             Err(ErrorCode::WouldBlock) => client.subscribe().block(),
