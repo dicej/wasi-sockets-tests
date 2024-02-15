@@ -50,7 +50,8 @@ TODO: Can we speed up the Rust build by excluding tools we don't need?
 ```shell
 curl -LO https://github.com/dicej/wasi-sdk/releases/download/wasi-sockets-alpha-2/wasi-sdk-20.26g68203b20b82e-macos.tar.gz
 tar xf wasi-sdk-20.26g68203b20b82e-macos.tar.gz
-export WASI_SDK_SYSROOT=$(pwd)/wasi-sdk-20.26g68203b20b82e/share/wasi-sysroot
+export WASI_SDK_PATH=$(pwd)/wasi-sdk-20.26g68203b20b82e
+export WASI_SDK_SYSROOT=$WASI_SDK_PATH/share/wasi-sysroot
 cd ..
 git clone https://github.com/dicej/rust -b sockets
 cd rust
