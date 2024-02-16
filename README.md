@@ -29,6 +29,7 @@ what this repository is intended to exercise as progress is made.
 - [client-python](./client-python): Python test using `asyncio`, built as a
   component by
   [componentize-py](https://github.com/bytecodealliance/componentize-py)
+- [client-python-redis](./client-python-redis): Python test using `redis-py`
 
 ## Building and running
 
