@@ -43,8 +43,8 @@ In the commands that follow, replace `aarch64-apple-darwin` with your host
 platform's target triple, and replace `macos` with `linux` or `mingw` (Windows)
 as appropriate.
 
-Note that cloning the `llvm-project` submodule of the `rust` repo may both take
-a _long_ time.
+Note that cloning the `llvm-project` submodule of the `rust` repo may take a
+_long_ time.
 
 TODO: Can we speed up the Rust build by excluding tools we don't need?
 
