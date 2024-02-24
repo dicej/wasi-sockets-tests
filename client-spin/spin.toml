@@ -1,0 +1,18 @@
+spin_manifest_version = 2
+
+[application]
+authors = ["Fermyon Engineering <engineering@fermyon.com>"]
+description = "A simple application that returns hello."
+name = "spin-hello-world"
+version = "1.0.0"
+
+[[trigger.http]]
+route = "/"
+component = "test"
+
+[component.test]
+source = "../target/wasm32-wasi/release/sockets-spin.wasm"
+allowed_outbound_hosts = ["*://127.0.0.1:5001"]
+[component.test.build]
+command = "cargo build --target wasm32-wasi --release"
+watch = ["src/**/*.rs", "Cargo.toml"]
