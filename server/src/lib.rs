@@ -372,16 +372,10 @@ mod tests {
     }
 
     impl WasiView for SocketsCtx {
-        fn table(&self) -> &ResourceTable {
-            &self.table
-        }
-        fn table_mut(&mut self) -> &mut ResourceTable {
+        fn table(&mut self) -> &mut ResourceTable {
             &mut self.table
         }
-        fn ctx(&self) -> &WasiCtx {
-            &self.wasi
-        }
-        fn ctx_mut(&mut self) -> &mut WasiCtx {
+        fn ctx(&mut self) -> &mut WasiCtx {
             &mut self.wasi
         }
     }
@@ -436,9 +430,12 @@ mod tests {
             Some(Path::new("../client/wit")),
             Some("wasi:cli/command@0.2.0"),
             &src_paths,
+            &[],
             "app",
             tmp.path(),
             None,
+            None,
+            false,
         )
         .await?;
         Ok(fs::read(tmp.path()).await?)

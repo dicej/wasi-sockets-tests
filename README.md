@@ -49,9 +49,9 @@ _long_ time.
 TODO: Can we speed up the Rust build by excluding tools we don't need?
 
 ```shell
-curl -LO https://github.com/dicej/wasi-sdk/releases/download/wasi-sockets-alpha-2/wasi-sdk-20.26g68203b20b82e-macos.tar.gz
-tar xf wasi-sdk-20.26g68203b20b82e-macos.tar.gz
-export WASI_SDK_PATH=$(pwd)/wasi-sdk-20.26g68203b20b82e
+curl -LO https://github.com/dicej/wasi-sdk/releases/download/wasi-sockets-alpha-5/wasi-sdk-20.46gf3a1f8991535-macos.tar.gz
+tar xf wasi-sdk-20.46gf3a1f8991535-macos.tar.gz
+export WASI_SDK_PATH=$(pwd)/wasi-sdk-20.46gf3a1f8991535
 export WASI_SDK_SYSROOT=$WASI_SDK_PATH/share/wasi-sysroot
 cd ..
 git clone https://github.com/dicej/rust -b sockets
@@ -59,9 +59,13 @@ cd rust
 ./configure \
     --target=wasm32-wasi,wasm32-unknown-unknown,aarch64-apple-darwin \
     --set=target.wasm32-wasi.wasi-root=$WASI_SDK_SYSROOT \
-    --enable-lld
-./x.py build --stage 1
-rustup toolchain link wasi-sockets build/host/stage1
+    --enable-lld \
+    --tools=cargo \
+    --prefix=$(pwd)/build/install \
+    --sysconfdir=$(pwd)/build/etc \
+    --set=build.docs=false
+./x.py install
+rustup toolchain link wasi-sockets build/install
 export WASI_SOCKETS_TESTS_TOOLCHAIN=wasi-sockets
 cd ..
 ```
