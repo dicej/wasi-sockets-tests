@@ -505,8 +505,6 @@ mod tests {
             )>,
         >,
     ) -> Result<()> {
-        std::fs::write("/tmp/component.wasm", component)?;
-
         static ONCE: Once = Once::new();
         ONCE.call_once(pretty_env_logger::init);
 
