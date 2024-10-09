@@ -362,8 +362,7 @@ mod tests {
             component::{Component, Linker, ResourceTable},
             Config, Engine, Store,
         },
-        wasmtime_wasi::preview2::{command, WasiCtx, WasiCtxBuilder, WasiView},
-        wit_component::ComponentEncoder,
+        wasmtime_wasi::{bindings, WasiCtx, WasiCtxBuilder, WasiView},
     };
 
     struct SocketsCtx {
@@ -381,26 +380,8 @@ mod tests {
     }
 
     async fn build_component(src_path: &str, name: &str) -> Result<Vec<u8>> {
-        let adapter_path = if let Ok(path) = env::var("WASI_SOCKETS_TESTS_ADAPTER") {
-            path
-        } else {
-            let adapter_url = "https://github.com/bytecodealliance/wasmtime/releases\
-                               /download/v17.0.0/wasi_snapshot_preview1.command.wasm";
-
-            let adapter_path = "../target/wasi_snapshot_preview1.command.wasm";
-
-            if !fs::try_exists(adapter_path).await? {
-                fs::write(
-                    adapter_path,
-                    reqwest::get(adapter_url).await?.bytes().await?,
-                )
-                .await?;
-            }
-            adapter_path.to_owned()
-        };
-
         let toolchain =
-            env::var("WASI_SOCKETS_TESTS_TOOLCHAIN").unwrap_or_else(|_| "stable".to_owned());
+            env::var("WASI_SOCKETS_TESTS_TOOLCHAIN").unwrap_or_else(|_| "nightly".to_owned());
 
         if Command::new("cargo")
             .current_dir(src_path)
@@ -408,17 +389,13 @@ mod tests {
                 format!("+{toolchain}").as_str(),
                 "build",
                 "--target",
-                "wasm32-wasi",
+                "wasm32-wasip2",
             ])
             .status()
             .await?
             .success()
         {
-            Ok(ComponentEncoder::default()
-                .validate(true)
-                .module(&fs::read(format!("../target/wasm32-wasi/debug/{name}.wasm")).await?)?
-                .adapter("wasi_snapshot_preview1", &fs::read(adapter_path).await?)?
-                .encode()?)
+            Ok(fs::read(format!("../target/wasm32-wasip2/debug/{name}.wasm")).await?)
         } else {
             Err(anyhow!("cargo build failed"))
         }
@@ -433,7 +410,6 @@ mod tests {
             &[],
             "app",
             tmp.path(),
-            None,
             None,
             false,
         )
@@ -526,7 +502,7 @@ mod tests {
 
         let mut linker = Linker::new(&engine);
 
-        command::add_to_linker(&mut linker)?;
+        wasmtime_wasi::add_to_linker_async(&mut linker)?;
 
         let table = ResourceTable::new();
         let wasi = WasiCtxBuilder::new()
@@ -543,8 +519,7 @@ mod tests {
 
         let mut store = Store::new(&engine, SocketsCtx { table, wasi });
 
-        let (command, _) =
-            command::Command::instantiate_async(&mut store, &component, &linker).await?;
+        let command = bindings::Command::instantiate_async(&mut store, &component, &linker).await?;
 
         command
             .wasi_cli_run()

@@ -19,5 +19,5 @@ futures = "0.3.29"
 wit-bindgen = "0.16.0"
 
 [patch.crates-io]
-tokio = { git = "https://github.com/dicej/tokio", branch = "wasi-sockets" }
-tokio-postgres = { git = "https://github.com/dicej/rust-postgres", branch = "wasi-sockets" }
+tokio = { git = "https://github.com/dicej/tokio", branch = "wasip2" }
+tokio-postgres = { git = "https://github.com/dicej/rust-postgres", branch = "wasip2" }
