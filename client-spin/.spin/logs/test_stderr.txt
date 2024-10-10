@@ -1,0 +1,48 @@
+thread '<unnamed>' panicked at client-spin/src/main.rs:14:16:
+called `Result::unwrap()` on an `Err` value: expected IPv4 or IPv6 socket address CLI argument
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread '<unnamed>' panicked at client-spin/src/main.rs:14:16:
+called `Result::unwrap()` on an `Err` value: expected IPv4 or IPv6 socket address CLI argument
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread '<unnamed>' panicked at client-spin/src/main.rs:14:16:
+called `Result::unwrap()` on an `Err` value: expected IPv4 or IPv6 socket address CLI argument
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread '<unnamed>' panicked at client-spin/src/main.rs:14:16:
+called `Result::unwrap()` on an `Err` value: expected IPv4 or IPv6 socket address CLI argument
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread '<unnamed>' panicked at client-spin/src/main.rs:14:16:
+called `Result::unwrap()` on an `Err` value: access-denied (error 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: failed to start connection
+FAIL: failed to start connection
+FAIL: access-denied (error 1)
+FAIL: connection-refused (error 14)
+FAIL: connection-refused (error 14)
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: connection-refused (error 14)
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: connection-refused (error 14)
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: connection-refused (error 14)
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: StreamError::Closed
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: access-denied (error 1)
+FAIL: connection-refused (error 14)
