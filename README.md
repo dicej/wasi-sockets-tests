@@ -28,8 +28,6 @@ This is a test harness for prototyping support for
 - Unix-style host (e.g. Linux, MacOS, Mingw, WSL2)
 - Python
 - Rust (with the `wasm32-wasip2` and `wasm32-unknown-unknown` targets installed)
-    - As of this writing, the `wasm32-wasip2` target is only available in Rust
-      nightly
 
 In order to build `componentize-py`, we need to use a temporary fork of
 `wasi-sdk`.  In the commands that follow, replace with your host platform's
@@ -43,13 +41,6 @@ curl -LO https://github.com/dicej/wasi-sdk/releases/download/wasi-sockets-alpha-
 tar xf wasi-sdk-20.46gf3a1f8991535-macos.tar.gz
 export WASI_SDK_PATH=$(pwd)/wasi-sdk-20.46gf3a1f8991535
 ```
-
-Also, as of this writing, the `wasm-component-ld` binary shipped with Rust
-nightly for the `wasm32-wasip2` target has a bug, so you'll need to upgrade it
-manually, e.g. `cargo install wasm-component-ld --force --version 0.5.10 --root
-$HOME/.rustup/toolchains/nightly-aarch64-unknown-linux-gnu/lib/rustlib/aarch64-unknown-linux-gnu`,
-adjusting the path according to where the bin directory containing
-`wasm-component-ld` is found.
 
 Once the above is complete, you can switch to the `server` directory in your
 clone of this repo and run the tests:
