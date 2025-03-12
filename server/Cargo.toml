@@ -23,6 +23,6 @@ wasmtime = { version = "24.0.0", features = ["component-model"] }
 wasmtime-wasi = { version = "24.0.0" }
 reqwest = "0.11.22"
 pretty_env_logger = "0.5.0"
-componentize-py = { git = "https://github.com/bytecodealliance/componentize-py", rev = "5aa94386" }
+componentize-py = { git = "https://github.com/bytecodealliance/componentize-py", rev = "539472b4" }
 
 [workspace]

@@ -406,12 +406,16 @@ mod tests {
         componentize_py::componentize(
             Some(Path::new("../client/wit")),
             Some("wasi:cli/command@0.2.0"),
+            &[],
+            false,
             &src_paths,
             &[],
             "app",
             tmp.path(),
             None,
             false,
+            &HashMap::new(),
+            &HashMap::new(),
         )
         .await?;
         Ok(fs::read(tmp.path()).await?)
