@@ -1,9 +1,11 @@
 [workspace]
 members = [
   "client",
+  "client-spin",
   "client-std",
   "client-tokio",
-  "client-tokio-postgres",    
+  "client-tokio-postgres",
+  "server",
 ]
 resolver = "2"
 
