@@ -471,8 +471,8 @@ dependencies = [
 
 [[package]]
 name = "componentize-py"
-version = "0.16.0"
-source = "git+https://github.com/bytecodealliance/componentize-py?rev=539472b4#539472b4e6eb6e3d478928d0e4966d75baf0a1dd"
+version = "0.17.1"
+source = "git+https://github.com/bytecodealliance/componentize-py?rev=4795640f#4795640f7e13726e33b049c8a971db752a1921af"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -509,7 +509,7 @@ dependencies = [
 [[package]]
 name = "componentize-py-shared"
 version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/componentize-py?rev=539472b4#539472b4e6eb6e3d478928d0e4966d75baf0a1dd"
+source = "git+https://github.com/bytecodealliance/componentize-py?rev=4795640f#4795640f7e13726e33b049c8a971db752a1921af"
 
 [[package]]
 name = "const-oid"
@@ -2961,7 +2961,7 @@ dependencies = [
 [[package]]
 name = "test-generator"
 version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/componentize-py?rev=539472b4#539472b4e6eb6e3d478928d0e4966d75baf0a1dd"
+source = "git+https://github.com/bytecodealliance/componentize-py?rev=4795640f#4795640f7e13726e33b049c8a971db752a1921af"
 dependencies = [
  "anyhow",
  "getrandom 0.2.15",

@@ -14,10 +14,10 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = { version = "1.0.75", features = ["backtrace"] }
-tokio = "1.40.0"
+tokio = "1.45.1"
 futures = "0.3.29"
 wit-bindgen = "0.16.0"
 
 [patch.crates-io]
-tokio = { git = "https://github.com/dicej/tokio", branch = "wasip2" }
+tokio = { git = "https://github.com/dicej/tokio", branch = "wasip2-draft" }
 tokio-postgres = { git = "https://github.com/dicej/rust-postgres", branch = "wasip2" }

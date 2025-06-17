@@ -289,6 +289,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "io-uring"
+version = "0.7.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ebb93303c65a11753dd0e45cd6bfa5c65ee1f0b9f8e2178b6998ddc8b284f04"
+dependencies = [
+ "bitflags 2.4.2",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,9 +322,9 @@ checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
 
 [[package]]
 name = "libc"
-version = "0.2.159"
+version = "0.2.173"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "561d97a539a36e26a9a5fad1ea11a3039a67714694aaa379433e580854bc3dc5"
+checksum = "d8cfeafaffdbc32176b64fb251369d52ea9f0a8fbc6f8759edffef7b525d64bb"
 
 [[package]]
 name = "lock_api"
@@ -358,13 +369,13 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.0.2"
-source = "git+https://github.com/dicej/mio?branch=wasip2#08ec4b1988c92e8398183d7612ec48045d59391d"
+version = "1.0.4"
+source = "git+https://github.com/dicej/mio?branch=wasip2-draft#388f6af4719c837891a53a579de5249dfc175e41"
 dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "wasi 0.13.3+wasi-0.2.2",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -714,14 +725,16 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.40.0"
-source = "git+https://github.com/dicej/tokio?branch=wasip2#6ca921f874922c5e20a2aefcfbf4c843df08ae03"
+version = "1.45.1"
+source = "git+https://github.com/dicej/tokio?branch=wasip2-draft#630f6d06b8a8f7766a43e2426c585945a743658c"
 dependencies = [
  "backtrace",
  "bytes",
+ "io-uring",
  "libc",
  "mio",
  "pin-project-lite",
+ "slab",
  "socket2",
  "tokio-macros",
  "windows-sys 0.52.0",
@@ -729,8 +742,8 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "2.4.0"
-source = "git+https://github.com/dicej/tokio?branch=wasip2#6ca921f874922c5e20a2aefcfbf4c843df08ae03"
+version = "2.5.0"
+source = "git+https://github.com/dicej/tokio?branch=wasip2-draft#630f6d06b8a8f7766a43e2426c585945a743658c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -998,6 +1011,15 @@ name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.59.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
 dependencies = [
  "windows-targets 0.52.6",
 ]

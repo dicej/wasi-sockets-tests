@@ -1,22 +1,22 @@
 #![deny(warnings)]
 
 use {
-    anyhow::{anyhow, Context, Error, Result},
+    anyhow::{Context, Error, Result, anyhow},
     async_trait::async_trait,
     bytes::{Buf, Bytes, BytesMut},
     futures::{
-        stream::{self, SplitSink},
         FutureExt, SinkExt, StreamExt, TryStreamExt,
+        stream::{self, SplitSink},
     },
     pgwire::{
         api::{
+            ClientInfo, Type,
             auth::noop::NoopStartupHandler,
             portal::{Format, Portal},
             query::{ExtendedQueryHandler, SimpleQueryHandler, StatementOrPortal},
             results::{DataRowEncoder, DescribeResponse, FieldInfo, QueryResponse, Response},
             stmt::NoopQueryParser,
             store::MemPortalStore,
-            ClientInfo, Type,
         },
         error::PgWireResult,
     },
@@ -256,57 +256,63 @@ pub async fn serve_redis(
                     }
                     _ => return unexpected(),
                 },
-                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }] => {
-                    match (data1.deref(), data2.deref()) {
-                        (b"GET", b"foo") => {
-                            tx.lock()
-                                .await
-                                .send(Frame::BlobString {
-                                    data: Bytes::copy_from_slice(b"bar"),
-                                    attributes: None,
-                                })
-                                .await?;
-                        }
-                        (b"COMMAND", b"DOCS") => {
-                            tx.lock()
-                                .await
-                                .send(Frame::Map {
-                                    data: HashMap::new(),
-                                    attributes: None,
-                                })
-                                .await?;
-                        }
-                        _ => return unexpected(),
+                [
+                    Frame::BlobString { data: data1, .. },
+                    Frame::BlobString { data: data2, .. },
+                ] => match (data1.deref(), data2.deref()) {
+                    (b"GET", b"foo") => {
+                        tx.lock()
+                            .await
+                            .send(Frame::BlobString {
+                                data: Bytes::copy_from_slice(b"bar"),
+                                attributes: None,
+                            })
+                            .await?;
                     }
-                }
-                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { data: data3, .. }] => {
-                    match (data1.deref(), data2.deref(), data3.deref()) {
-                        (b"SET", b"foo", b"bar") => {
-                            tx.lock()
-                                .await
-                                .send(Frame::SimpleString {
-                                    data: Bytes::copy_from_slice(b"OK"),
-                                    attributes: None,
-                                })
-                                .await?;
-                        }
-                        _ => return unexpected(),
+                    (b"COMMAND", b"DOCS") => {
+                        tx.lock()
+                            .await
+                            .send(Frame::Map {
+                                data: HashMap::new(),
+                                attributes: None,
+                            })
+                            .await?;
                     }
-                }
-                [Frame::BlobString { data: data1, .. }, Frame::BlobString { data: data2, .. }, Frame::BlobString { .. }, Frame::BlobString { .. }] => {
-                    match (data1.deref(), data2.deref()) {
-                        (b"CLIENT", b"SETINFO") => {
-                            tx.lock()
-                                .await
-                                .send(Frame::SimpleString {
-                                    data: Bytes::copy_from_slice(b"OK"),
-                                    attributes: None,
-                                })
-                                .await?;
-                        }
-                        _ => return unexpected(),
+                    _ => return unexpected(),
+                },
+                [
+                    Frame::BlobString { data: data1, .. },
+                    Frame::BlobString { data: data2, .. },
+                    Frame::BlobString { data: data3, .. },
+                ] => match (data1.deref(), data2.deref(), data3.deref()) {
+                    (b"SET", b"foo", b"bar") => {
+                        tx.lock()
+                            .await
+                            .send(Frame::SimpleString {
+                                data: Bytes::copy_from_slice(b"OK"),
+                                attributes: None,
+                            })
+                            .await?;
                     }
-                }
+                    _ => return unexpected(),
+                },
+                [
+                    Frame::BlobString { data: data1, .. },
+                    Frame::BlobString { data: data2, .. },
+                    Frame::BlobString { .. },
+                    Frame::BlobString { .. },
+                ] => match (data1.deref(), data2.deref()) {
+                    (b"CLIENT", b"SETINFO") => {
+                        tx.lock()
+                            .await
+                            .send(Frame::SimpleString {
+                                data: Bytes::copy_from_slice(b"OK"),
+                                attributes: None,
+                            })
+                            .await?;
+                    }
+                    _ => return unexpected(),
+                },
                 _ => return unexpected(),
             },
             _ => return unexpected(),
@@ -359,10 +365,10 @@ mod tests {
         tempfile::NamedTempFile,
         tokio::{fs, process::Command},
         wasmtime::{
-            component::{Component, Linker, ResourceTable},
             Config, Engine, Store,
+            component::{Component, Linker, ResourceTable},
         },
-        wasmtime_wasi::{bindings, WasiCtx, WasiCtxBuilder, WasiView},
+        wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiView, bindings},
     };
 
     struct SocketsCtx {
@@ -408,6 +414,7 @@ mod tests {
             Some("wasi:cli/command@0.2.0"),
             &[],
             false,
+            Some("command"),
             &src_paths,
             &[],
             "app",
