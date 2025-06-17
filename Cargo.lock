@@ -672,6 +672,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "sockets-server"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "pgwire",
+ "postgres-protocol 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pretty_env_logger",
+ "reqwest",
+ "tokio",
+ "tracing",
+ "wasmtime",
+ "wasmtime-wasi",
+ "wit-component",
+]
+
+[[package]]
+name = "sockets-spin"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "wit-bindgen 0.14.0",
+]
+
+[[package]]
 name = "spdx"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
